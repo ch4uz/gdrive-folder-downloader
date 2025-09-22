@@ -521,7 +521,7 @@ const downloadFolderRecursively = async (
   try {
     const listParams: any = {
       q: `'${folderId}' in parents`,
-      fields: "files(id, name, mimeType, size)",
+      fields: "files(id, name, mimeType, size, shortcutDetails, driveId)",
     };
 
     if (supportsSharedDrives) {
@@ -536,7 +536,26 @@ const downloadFolderRecursively = async (
     for (const item of items) {
       const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name;
 
+      // Handle shortcuts to folders
       if (
+        item.mimeType === "application/vnd.google-apps.shortcut" &&
+        item.shortcutDetails?.targetMimeType === "application/vnd.google-apps.folder"
+      ) {
+        console.log(`Processing folder shortcut: ${itemPath} -> ${item.shortcutDetails.targetId}`);
+        try {
+          // Use the target folder ID and enable shared drive support for shortcuts
+          const subfolderFiles = await downloadFolderRecursively(
+            drive,
+            item.shortcutDetails.targetId!,
+            itemPath,
+            true, // Always use shared drive support for shortcuts
+          );
+          downloadedFiles.push(...subfolderFiles);
+        } catch (error) {
+          console.error(`Error processing folder shortcut ${itemPath}:`, error);
+          // Continue with other items even if this shortcut fails
+        }
+      } else if (
         item.mimeType === "application/vnd.google-apps.folder" ||
         (!item.mimeType && supportsSharedDrives)
       ) {
@@ -545,16 +564,35 @@ const downloadFolderRecursively = async (
           drive,
           item.id!,
           itemPath,
-          supportsSharedDrives,
+          supportsSharedDrives || !!item.driveId, // Enable shared drive support if item is in a shared drive
         );
         downloadedFiles.push(...subfolderFiles);
+      } else if (item.mimeType === "application/vnd.google-apps.shortcut") {
+        // Handle file shortcuts
+        console.log(`Processing file shortcut: ${itemPath} -> ${item.shortcutDetails?.targetId}`);
+        if (item.shortcutDetails?.targetId) {
+          try {
+            const downloadedFile = await downloadFileRecursively(
+              drive,
+              item.shortcutDetails.targetId,
+              itemPath,
+              true, // Always use shared drive support for shortcuts
+            );
+            if (downloadedFile) {
+              downloadedFiles.push(downloadedFile);
+            }
+          } catch (error) {
+            console.error(`Error processing file shortcut ${itemPath}:`, error);
+            // Continue with other items even if this shortcut fails
+          }
+        }
       } else {
         console.log(`Downloading file: ${itemPath}`);
         const downloadedFile = await downloadFileRecursively(
           drive,
           item.id!,
           itemPath,
-          supportsSharedDrives,
+          supportsSharedDrives || !!item.driveId, // Enable shared drive support if item is in a shared drive
         );
         if (downloadedFile) {
           downloadedFiles.push(downloadedFile);
@@ -577,21 +615,27 @@ app.post("/download-folder", async (req, res) => {
     // Get folder metadata with shared drive support
     const folderMetadata = await drive.files.get({
       fileId: folderId,
-      fields: "name, driveId",
+      fields: "name, driveId, mimeType, shortcutDetails",
       supportsAllDrives: true,
     });
 
     const isSharedDrive = !!folderMetadata.data.driveId;
+    const isShortcut = folderMetadata.data.mimeType === "application/vnd.google-apps.shortcut";
 
     console.log(
-      `Starting recursive download of folder: ${folderMetadata.data.name} (${isSharedDrive ? "Shared Drive" : "Personal Drive"})`,
+      `Starting recursive download of folder: ${folderMetadata.data.name} (${isSharedDrive ? "Shared Drive" : "Personal Drive"}${isShortcut ? ", Shortcut" : ""})`,
     );
+
+    // If this is a shortcut, use the target folder ID
+    const actualFolderId = isShortcut && folderMetadata.data.shortcutDetails?.targetId 
+      ? folderMetadata.data.shortcutDetails.targetId 
+      : folderId;
 
     const downloadedFiles = await downloadFolderRecursively(
       drive,
-      folderId,
+      actualFolderId,
       "",
-      isSharedDrive,
+      isSharedDrive || isShortcut, // Enable shared drive support for shortcuts
     );
 
     console.log(`Download complete. Total files: ${downloadedFiles.length}`);
