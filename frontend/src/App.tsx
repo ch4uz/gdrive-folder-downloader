@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+// Declare global variables for Google APIs
+declare global {
+  interface Window {
+    gapi: any;
+    google: any;
+  }
+}
+
 interface Folder {
   id: string;
   name: string;
@@ -35,17 +43,16 @@ const API_BASE_URL = 'http://localhost:3001';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string>('');
   const [selectedFolderName, setSelectedFolderName] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filteredFolders, setFilteredFolders] = useState<Folder[]>([]);
-  const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [downloadedFiles, setDownloadedFiles] = useState<FileData[]>([]);
   const [downloadedFolderName, setDownloadedFolderName] = useState<string>('');
   const [totalFiles, setTotalFiles] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [googleApiKey, setGoogleApiKey] = useState<string>('');
+  const [googleClientId, setGoogleClientId] = useState<string>('');
+  const [pickerLoaded, setPickerLoaded] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -63,7 +70,35 @@ function App() {
     } else if (authStatus === 'error') {
       setError('Authentication failed');
     }
+
+    // Load Google API configuration
+    loadGoogleConfig();
   }, []);
+
+  const loadGoogleConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config`);
+      const config = await response.json();
+      setGoogleApiKey(config.googleApiKey);
+      setGoogleClientId(config.googleClientId);
+    } catch (error) {
+      console.error('Error loading Google config:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated && googleApiKey && googleClientId) {
+      loadPickerAPI();
+    }
+  }, [isAuthenticated, googleApiKey, googleClientId]);
+
+  const loadPickerAPI = () => {
+    if (window.gapi) {
+      window.gapi.load('picker', () => {
+        setPickerLoaded(true);
+      });
+    }
+  };
 
   const setTokensOnServer = async (tokens: any) => {
     try {
@@ -77,9 +112,12 @@ function App() {
       
       if (response.ok) {
         setIsAuthenticated(true);
+        // Store access token for picker
+        if (tokens.access_token) {
+          localStorage.setItem('google_access_token', tokens.access_token);
+        }
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
-        fetchFolders();
       } else {
         setError('Failed to set authentication tokens');
       }
@@ -100,66 +138,51 @@ function App() {
     }
   };
 
-  const fetchFolders = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/folders`);
-      const data = await response.json();
-      console.log('Folders data:', data);
-      
-      if (Array.isArray(data)) {
-        setFolders(data);
-        setFilteredFolders(data);
-      } else {
-        console.error('Expected array but got:', typeof data, data);
-        setFolders([]);
-        setFilteredFolders([]);
-        setError('Invalid response format from server');
-      }
-    } catch (error) {
-      console.error('Error fetching folders:', error);
-      setFolders([]);
-      setError('Failed to fetch folders');
+  const openPicker = () => {
+    if (!window.gapi || !pickerLoaded) {
+      setError('Google Picker API not loaded');
+      return;
     }
-  };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    setSelectedFolder('');
-    setSelectedFolderName('');
+    const picker = new window.google.picker.PickerBuilder()
+      .addView(new window.google.picker.DocsView(window.google.picker.ViewId.FOLDERS)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true))
+      .addView(new window.google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setQuery('type:folder'))
+      .setOAuthToken(getAccessToken())
+      .setDeveloperKey(googleApiKey)
+      .setCallback(pickerCallback)
+      .build();
     
-    if (query.trim() === '') {
-      setFilteredFolders(folders);
-      setShowDropdown(false);
-    } else {
-      const filtered = folders.filter(folder =>
-        folder.name.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredFolders(filtered);
-      setShowDropdown(true);
+    picker.setVisible(true);
+  };
+
+  const getAccessToken = () => {
+    // Get the access token from the OAuth client
+    // This is a simplified version - in production you'd want better token management
+    return localStorage.getItem('google_access_token') || '';
+  };
+
+  const pickerCallback = (data: any) => {
+    if (data.action === window.google.picker.Action.PICKED) {
+      const doc = data.docs[0];
+      if (doc) {
+        setSelectedFolder(doc.id);
+        setSelectedFolderName(doc.name);
+        setError('');
+      }
+    } else if (data.action === window.google.picker.Action.CANCEL) {
+      // User cancelled the picker
     }
   };
 
-  const handleFolderSelect = (folder: Folder) => {
-    setSelectedFolder(folder.id);
-    setSelectedFolderName(folder.name);
-    setSearchQuery(folder.name);
-    setShowDropdown(false);
-  };
 
-  const handleInputFocus = () => {
-    if (folders.length > 0) {
-      setFilteredFolders(folders);
-      setShowDropdown(true);
-    }
-  };
 
-  const handleInputBlur = () => {
-    // Delay hiding dropdown to allow clicking on items
-    setTimeout(() => {
-      setShowDropdown(false);
-    }, 150);
-  };
+
+
 
   const downloadFolderContents = async () => {
     if (!selectedFolder) {
@@ -250,54 +273,18 @@ function App() {
         <h1>Google Drive Folder Downloader</h1>
         
         <div className="folder-selection">
-          <h2>Search and select a folder to download:</h2>
-          <div className="autocomplete-container">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              placeholder="Type to search folders..."
-              className="folder-input"
-            />
-            {showDropdown && filteredFolders.length > 0 && (
-              <div className="autocomplete-dropdown">
-                {filteredFolders.map((folder) => (
-                  <div
-                    key={folder.id}
-                    className={`autocomplete-item ${
-                      folder.folderType === 'shared-drive' ? 'shared-drive-folder' :
-                      folder.folderType === 'shared-drive-shortcut' ? 'shared-drive-shortcut-folder' : 
-                      folder.isShared ? 'shared-folder' : 'owned-folder'
-                    }`}
-                    onClick={() => handleFolderSelect(folder)}
-                  >
-                    <div className="folder-info">
-                      <strong>{folder.name}</strong>
-                      <div className="folder-badges">
-                        {folder.folderType === 'shared' && <span className="shared-indicator">👥 Shared</span>}
-                        {folder.folderType === 'shared-drive' && (
-                          <span className="shared-drive-indicator">
-                            🏢 {folder.sharedDriveName || 'Shared Drive'}
-                          </span>
-                        )}
-                        {folder.folderType === 'shared-drive-shortcut' && (
-                          <span className="shared-drive-shortcut-indicator">
-                            🔗 Shared Drive
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {showDropdown && searchQuery && filteredFolders.length === 0 && (
-              <div className="autocomplete-dropdown">
-                <div className="autocomplete-item no-results">
-                  No folders found
-                </div>
+          <h2>Select a folder to download:</h2>
+          <div className="picker-container">
+            <button 
+              onClick={openPicker}
+              disabled={!pickerLoaded || loading}
+              className="picker-button"
+            >
+              {pickerLoaded ? 'Choose Folder from Google Drive' : 'Loading Picker...'}
+            </button>
+            {selectedFolderName && (
+              <div className="selected-folder">
+                <p><strong>Selected folder:</strong> {selectedFolderName}</p>
               </div>
             )}
           </div>

@@ -56,6 +56,13 @@ app.post("/set-tokens", (req, res) => {
   res.json({ success: true });
 });
 
+app.get("/config", (req, res) => {
+  res.json({
+    googleApiKey: process.env.GOOGLE_API_KEY,
+    googleClientId: process.env.GOOGLE_CLIENT_ID
+  });
+});
+
 app.get("/folders", async (req, res) => {
   try {
     const drive = google.drive({ version: "v3", auth: oauth2Client });

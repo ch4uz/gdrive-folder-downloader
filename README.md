@@ -14,11 +14,12 @@ A powerful React and Node.js application that allows users to authenticate with 
 
 ### 📂 Smart Folder Management
 - **Recursive Download**: Downloads entire folder structures including all subfolders
-- **Autocomplete Search**: Fast folder search with real-time filtering
-- **Visual Indicators**: Clear badges showing folder types:
-  - 👥 **Shared** - Regular shared folders
-  - 🏢 **Team Drive Name** - Shared drive folders  
-  - 🔗 **Shared Drive** - Shortcut folders to shared drives
+- **Google Drive Picker**: Native Google interface for folder selection with full hierarchy navigation
+- **Universal Access**: Seamless access to all folder types:
+  - 📁 **Personal Drive** - Your personal Google Drive folders
+  - 👥 **Shared Folders** - Folders shared directly with you
+  - 🏢 **Shared Drives** - Team/organizational shared drives
+  - 🔗 **Shortcut Folders** - Shortcuts to shared drive content
 
 ### 📄 Google Workspace Export
 Automatically exports Google Workspace documents to standard formats:
@@ -78,11 +79,12 @@ npm install
 2. Create a new project or select an existing one
 3. Note your project ID
 
-### 2. Enable Google Drive API
+### 2. Enable Required APIs
 
 1. Navigate to **APIs & Services** → **Library**
-2. Search for "Google Drive API"
-3. Click on it and press **Enable**
+2. Search for and enable the following APIs:
+   - **Google Drive API** - Click on it and press **Enable**
+   - **Google Picker API** - Click on it and press **Enable**
 
 ### 3. Configure OAuth Consent Screen
 
@@ -95,8 +97,9 @@ npm install
 4. Click **Save and Continue** through all steps
 5. Add your email as a test user in the **Test users** section
 
-### 4. Create OAuth 2.0 Credentials
+### 4. Create Required Credentials
 
+#### OAuth 2.0 Credentials
 1. Go to **APIs & Services** → **Credentials**
 2. Click **Create Credentials** → **OAuth 2.0 Client IDs**
 3. Choose **Web application**
@@ -105,6 +108,11 @@ npm install
    - **Authorized redirect URIs**: `http://localhost:3001/auth/google/callback`
 5. Click **Create**
 6. **Important**: Copy both the **Client ID** and **Client Secret**
+
+#### API Key (for Google Picker)
+1. In the same **Credentials** page, click **Create Credentials** → **API Key**
+2. Copy the generated **API Key**
+3. (Optional) Click **Restrict Key** to limit usage to your domain and the required APIs for better security
 
 ## 🔧 Environment Configuration
 
@@ -120,14 +128,19 @@ cd backend
 cp .env.example .env
 ```
 
-3. Edit the `.env` file with your Google OAuth credentials:
+3. Edit the `.env` file with your Google credentials:
 ```env
 GOOGLE_CLIENT_ID=your_client_id_from_google_console
 GOOGLE_CLIENT_SECRET=your_client_secret_from_google_console
 GOOGLE_REDIRECT_URI=http://localhost:3001/auth/google/callback
+GOOGLE_API_KEY=your_api_key_from_google_console
 PORT=3001
 FRONTEND_URL=http://localhost:3000
 ```
+
+**Required credentials:**
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: From OAuth 2.0 Client IDs
+- `GOOGLE_API_KEY`: From API Key creation (needed for Google Drive Picker)
 
 **⚠️ Security Note**: Never commit the `.env` file to version control. It's already included in `.gitignore`.
 
@@ -164,13 +177,15 @@ Open your browser and navigate to `http://localhost:3000`
 4. You'll be redirected back to the application
 
 ### 2. Folder Selection
-1. Use the search box to find folders by typing
-2. The autocomplete will show all available folders with type indicators:
-   - Regular folders (no badge)
-   - 👥 **Shared** folders
-   - 🏢 **Team Drive** folders
-   - 🔗 **Shared Drive** shortcuts
-3. Click on any folder to select it
+1. Click **"Choose Folder from Google Drive"** button
+2. The Google Drive Picker will open showing all your accessible folders:
+   - Personal Drive folders
+   - Shared folders (folders shared with you)
+   - Shared Drive/Team Drive folders
+   - Folders with shortcuts from shared drives
+3. Navigate through the folder structure using Google's native interface
+4. Select your desired folder and click "Select"
+5. The selected folder name will be displayed below the button
 
 ### 3. Download Process
 1. Click **"Download Folder Contents"**
@@ -248,10 +263,10 @@ For production use:
 - Check that you're added as a test user
 - Ensure redirect URI matches exactly
 
-**Folders Not Appearing**
-- Confirm you have access to the shared drives
-- Check that the Google Drive API is enabled
-- Verify OAuth scopes are correct
+**Google Drive Picker Issues**
+- **"Loading Picker..." stuck**: Check that Google Picker API is enabled and API key is valid
+- **Picker won't open**: Verify that both Google Drive API and Google Picker API are enabled
+- **"No folders visible"**: Ensure you have proper permissions and the OAuth consent is configured correctly
 
 **Download Failures**
 - Large files may take time to process
