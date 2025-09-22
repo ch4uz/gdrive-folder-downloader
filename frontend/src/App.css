@@ -1,0 +1,270 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-header h1 {
+  margin-bottom: 30px;
+}
+
+.auth-button {
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.auth-button:hover {
+  background-color: #3367d6;
+}
+
+.folder-selection {
+  margin: 30px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.autocomplete-container {
+  position: relative;
+  min-width: 400px;
+}
+
+.folder-input {
+  padding: 12px 16px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 2px solid #ccc;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: white;
+  color: #333;
+}
+
+.folder-input:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 2px solid #4285f4;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.autocomplete-item:hover {
+  background-color: #f5f5f5;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item.no-results {
+  color: #666;
+  cursor: default;
+  font-style: italic;
+}
+
+.autocomplete-item.no-results:hover {
+  background-color: white;
+}
+
+.folder-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.folder-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.shared-indicator {
+  font-size: 11px;
+  color: #1a73e8;
+  font-weight: normal;
+  background-color: rgba(26, 115, 232, 0.1);
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+.shared-drive-indicator {
+  font-size: 11px;
+  color: #34a853;
+  font-weight: normal;
+  background-color: rgba(52, 168, 83, 0.1);
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+.shared-drive-shortcut-indicator {
+  font-size: 11px;
+  color: #ea4335;
+  font-weight: normal;
+  background-color: rgba(234, 67, 53, 0.1);
+  padding: 2px 6px;
+  border-radius: 12px;
+}
+
+.autocomplete-item.shared-folder {
+  background-color: rgba(26, 115, 232, 0.05);
+}
+
+.autocomplete-item.shared-folder:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+}
+
+.autocomplete-item.shared-drive-folder {
+  background-color: rgba(52, 168, 83, 0.05);
+}
+
+.autocomplete-item.shared-drive-folder:hover {
+  background-color: rgba(52, 168, 83, 0.1);
+}
+
+.autocomplete-item.shared-drive-shortcut-folder {
+  background-color: rgba(234, 67, 53, 0.05);
+}
+
+.autocomplete-item.shared-drive-shortcut-folder:hover {
+  background-color: rgba(234, 67, 53, 0.1);
+}
+
+.download-button {
+  background-color: #34a853;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.download-button:hover:not(:disabled) {
+  background-color: #2d8f47;
+}
+
+.download-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #ea4335;
+  margin: 20px 0;
+  font-size: 16px;
+}
+
+.downloaded-files {
+  margin-top: 40px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.folder-stats {
+  color: #bdc1c6;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.file-item {
+  background-color: #3c4043;
+  padding: 20px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-info strong {
+  font-size: 18px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.file-info p {
+  margin: 2px 0;
+  font-size: 14px;
+  color: #bdc1c6;
+}
+
+.file-path {
+  font-family: monospace;
+  color: #9aa0a6 !important;
+  font-size: 13px !important;
+}
+
+.exported-info {
+  color: #ea4335 !important;
+  font-size: 12px !important;
+  font-style: italic;
+}
+
+.original-type {
+  color: #9aa0a6 !important;
+  font-size: 12px !important;
+}
+
+.download-file-button {
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 20px;
+}
+
+.download-file-button:hover {
+  background-color: #1557b0;
+}
